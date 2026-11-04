@@ -1,0 +1,62 @@
+# Python caches and local environments
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+env/
+
+# Editor and machine-specific files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+.agents/
+.codex/
+.aws/
+
+# Credentials and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+
+# Datasets: retain only preprocessing source and its upstream license
+/data/*
+!/data/isic/
+/data/isic/*
+!/data/isic/*.py
+!/data/isic/FoB_SAM_LICENSE.txt
+
+# Model weights and serialized arrays
+/checkpoints/
+*.pth
+*.pt
+*.ckpt
+*.onnx
+*.safetensors
+*.pkl
+*.pickle
+*.npy
+*.npz
+*.h5
+*.hdf5
+
+# Experiment artifacts, generated reports, and temporary files
+/exps/
+/exps_on_*/
+/output/
+/outputs/
+/results/
+/vis_outputs/
+/tmp/
+/logs/
+/runs/
+/wandb/
+*.log
+/BSP_函数中文pdf
