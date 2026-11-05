@@ -1780,8 +1780,14 @@ from models.Decoders import Decoder as IFRDecoder
 
 
 class FewShotSeg(nn.Module):
-    def __init__(self, pretrained_weights="deeplabv3"):
+    def __init__(self, pretrained_weights="deeplabv3", ablation_variant="full"):
         super().__init__()
+        from models.ablation import module_flags
+        self.ablation_variant = ablation_variant
+        flags = module_flags(ablation_variant)
+        self.use_sepc = flags["sepc"]
+        self.use_qrr = flags["qrr"]
+        self.use_swpa = flags["swpa"]
         # Encoder
         self.encoder = Res101Encoder(replace_stride_with_dilation=[True, True, False],
                                      pretrained_weights=pretrained_weights)
@@ -1878,20 +1884,22 @@ class FewShotSeg(nn.Module):
                              for shot in range(self.n_shots)] for way in range(self.n_ways)]
             bg_prototype = self.getPrototype(bg_prototype)
 
-            # 3. 用 CI 提取区域原型
-            if supp_mask[epi][0].sum() == 0:
-                region_protos = [[self.CI(supp_fts_[way][shot], supp_mask[[epi], way, shot],
-                                          self.kernel, self.stride, flag=0)
-                                  for shot in range(self.n_shots)] for way in range(self.n_ways)]
+            if self.use_sepc:
+                # 3. 用 CI 提取区域原型
+                if supp_mask[epi][0].sum() == 0:
+                    region_protos = [[self.CI(supp_fts_[way][shot], supp_mask[[epi], way, shot],
+                                              self.kernel, self.stride, flag=0)
+                                      for shot in range(self.n_shots)] for way in range(self.n_ways)]
+                else:
+                    region_protos = [[self.CI(supp_fts_[way][shot], supp_mask[[epi], way, shot],
+                                              self.kernel, self.stride, flag=1)
+                                      for shot in range(self.n_shots)] for way in range(self.n_ways)]
+
+                bg_pts = [torch.cat([region_protos[way][0][0], bg_prototype[way]], dim=0) for way in range(self.n_ways)]
+                fg_pts = [torch.cat([region_protos[way][0][1], prototype[way]], dim=0) for way in range(self.n_ways)]
             else:
-                region_protos = [[self.CI(supp_fts_[way][shot], supp_mask[[epi], way, shot],
-                                          self.kernel, self.stride, flag=1)
-                                  for shot in range(self.n_shots)] for way in range(self.n_ways)]
-
-            bg_pts = [torch.cat([region_protos[way][0][0], bg_prototype[way]], dim=0) for way in range(self.n_ways)]
-            fg_pts = [torch.cat([region_protos[way][0][1], prototype[way]], dim=0) for way in range(self.n_ways)]
-
-
+                # Parameter-matched global context for the support decoder.
+                fg_pts, bg_pts = prototype, bg_prototype
 
             # support self-prediction using prototype groups from CI
             supp_preds = [[self.getSelfPred(
@@ -2003,6 +2011,8 @@ class FewShotSeg(nn.Module):
         Returns:
             supp_pred: (1, 1, H, W)
         """
+        if not self.use_sepc:
+            fg_pts, bg_pts = fg_pts[-1:], bg_pts[-1:]
         B, C, H, W = supp_fts.shape
 
         # (1, H, W, C)
@@ -2241,6 +2251,8 @@ class FewShotSeg(nn.Module):
         fg_prototypes = self.mlp1(fg_fts.view(512, 256 * 256)).permute(1, 0)
         
 
+        if not self.use_sepc:
+            mask2 = mask  # Same-class sampling, no FN-based selection.
         if torch.sum(mask2[mask2 == 1]) > 0:
             #features_trans = features_trans[mask == 1]
             #hard_fg  是在假阴性mask2地图中挑选的弱点
@@ -2295,6 +2307,8 @@ class FewShotSeg(nn.Module):
         
         bg_prototypes = self.mlp2(bg_fts.view(512, 256 * 256)).permute(1, 0)
         
+        if not self.use_sepc:
+            mask2 = bg_mask  # Same-class sampling, no FP-based selection.
         if torch.sum(mask2[mask2 == 1]) > 0:
             hard_bg = self.get_random_pts(features_trans, mask2, 100)
             k = random.sample(range(len(bg_prototypes)), 500)
@@ -2448,38 +2462,49 @@ class FewShotSeg(nn.Module):
             # ============================================================
             # Stage 1: IFR  (chunk over K)
             # ============================================================
-            G = self.get_fuse_factor(fts_, sup_fts, mask)   # scalar
-            refined_chunks = []
-
             K = pts.shape[0]
-            for start in range(0, K, chunk_size):
-                end = min(start + chunk_size, K)
-                pts_chunk = pts[start:end]                                  # (kc, C)
+            if self.use_qrr:
+                G = self.get_fuse_factor(fts_, sup_fts, mask)   # scalar
+                refined_chunks = []
 
-                # sim_chunk: (kc, 1, H, W)
-                sim_chunk = torch.matmul(fts_, pts_chunk.transpose(0, 1)).permute(3, 0, 1, 2)
-                pseudo_mask = torch.sigmoid(sim_chunk * qry_scale)          # (kc,1,H,W)
+                for start in range(0, K, chunk_size):
+                    end = min(start + chunk_size, K)
+                    pts_chunk = pts[start:end]                                  # (kc, C)
 
-                # 不再显式 expand query feature，利用广播减少峰值显存
-                qry_update = torch.sum(qry_ft * pseudo_mask, dim=(-2, -1)) / \
-                            (pseudo_mask.sum(dim=(-2, -1)) + 1e-5)         # (kc, C)
+                    # sim_chunk: (kc, 1, H, W)
+                    sim_chunk = torch.matmul(fts_, pts_chunk.transpose(0, 1)).permute(3, 0, 1, 2)
+                    pseudo_mask = torch.sigmoid(sim_chunk * qry_scale)          # (kc,1,H,W)
 
-                fuse_in = torch.stack([pts_chunk * (1 - G), qry_update * G], dim=1)  # (kc,2,C)
-                fuse_in = fuse_in.unsqueeze(-1)                                        # (kc,2,C,1)
-                delta = self.fuse(fuse_in).squeeze(1).squeeze(-1)                      # (kc,C)
+                    # 不再显式 expand query feature，利用广播减少峰值显存
+                    qry_update = torch.sum(qry_ft * pseudo_mask, dim=(-2, -1)) / \
+                                (pseudo_mask.sum(dim=(-2, -1)) + 1e-5)         # (kc, C)
 
-                pts_refined_chunk = pts_chunk + delta                                   # (kc,C)
-                refined_chunks.append(pts_refined_chunk)
+                    fuse_in = torch.stack([pts_chunk * (1 - G), qry_update * G], dim=1)  # (kc,2,C)
+                    fuse_in = fuse_in.unsqueeze(-1)                                        # (kc,2,C,1)
+                    delta = self.fuse(fuse_in).squeeze(1).squeeze(-1)                      # (kc,C)
 
-                # 手动释放块内中间变量，帮助降低峰值
-                del sim_chunk, pseudo_mask, qry_update, fuse_in, delta, pts_refined_chunk
+                    pts_refined_chunk = pts_chunk + delta                                   # (kc,C)
+                    refined_chunks.append(pts_refined_chunk)
 
-            pts_refined = torch.cat(refined_chunks, dim=0)                              # (K,C)
+                    # 手动释放块内中间变量，帮助降低峰值
+                    del sim_chunk, pseudo_mask, qry_update, fuse_in, delta, pts_refined_chunk
+
+                pts_refined = torch.cat(refined_chunks, dim=0)                              # (K,C)
+            else:
+                pts_refined = pts
 
             # ============================================================
             # Stage 2: FD  (strict/global softmax over K with 2-pass chunk)
             # ============================================================
             pts_norm = F.normalize(pts_refined, dim=-1)
+
+            if not self.use_swpa:
+                # Same 2C+1 decoder interface, uniform weights over all prototypes.
+                matched_pts = pts_refined.mean(dim=0).view(1, c, 1, 1).expand(1, c, h, w)
+                mean_response = torch.matmul(fts_, pts_norm.mean(dim=0).view(c, 1))
+                mean_response = mean_response.permute(0, 3, 1, 2) * sup_scale
+                res.append(torch.cat([qry_ft, matched_pts, mean_response], dim=1))
+                continue
 
             # ---------- pass 1: find global max over K ----------
             global_max = None

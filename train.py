@@ -406,7 +406,12 @@ def main(_run, _config, _log):
     torch.set_num_threads(1)
 
     _log.info(f'Create model...')
-    model = FewShotSeg(pretrained_weights=_config['pretrained_weights'])
+    from models.ablation import module_flags, save_metadata
+    _log.info('Ablation %s: %s', _config['ablation_variant'], module_flags(_config['ablation_variant']))
+    if _run.observers:
+        save_metadata(Path(_run.observers[0].dir) / 'snapshots', _config)
+    model = FewShotSeg(pretrained_weights=_config['pretrained_weights'],
+                       ablation_variant=_config['ablation_variant'])
     model = model.cuda()
     model.train()
 

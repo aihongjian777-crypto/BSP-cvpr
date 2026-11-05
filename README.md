@@ -1,3 +1,10 @@
+# BSP module ablations
+
+This is the `ablation` branch. The original complete-model snapshot remains on `main`.
+Four configurations are available: `full`, `wo_sepc`, `wo_qrr`, and `wo_swpa`.
+See [the ablation guide](ABLATION.md) for exact replacement definitions, training,
+evaluation, and the module-checkmark results table. Each variant must be trained separately.
+
 # FSMIS via CoW
 Codes for the following paper:
 Concentrate on Weakness: Mining Hard Prototypes for Few-Shot Medical Image Segmentation

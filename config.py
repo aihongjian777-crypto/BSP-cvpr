@@ -31,6 +31,7 @@ for source_file in sources_to_save:
 def cfg():
     """Default configurations"""
     seed = 2025
+    ablation_variant = 'full'
     gpu_id = 0
     num_workers = 1  # 0 for debugging.
     mode = 'train'
@@ -119,6 +120,26 @@ def isic_setting1():
     path = {'log_dir': str(Path(__file__).resolve().parent / 'exps_on_ISIC2018')}
 
 
+@ex.named_config
+def ablation_full():
+    ablation_variant = 'full'
+
+
+@ex.named_config
+def ablation_wo_sepc():
+    ablation_variant = 'wo_sepc'
+
+
+@ex.named_config
+def ablation_wo_qrr():
+    ablation_variant = 'wo_qrr'
+
+
+@ex.named_config
+def ablation_wo_swpa():
+    ablation_variant = 'wo_swpa'
+
+
 @ex.config_hook
 def add_observer(config, command_name, logger):
     """A hook fucntion to add observer"""
@@ -135,6 +156,9 @@ def add_observer(config, command_name, logger):
         if config['use_gt'] or config['exclude_label']:
             raise ValueError('ISIC Setting I trains with SLIC labels and all disease categories')
         config['exp_str'] = '{}_isic_setting1_cv{}'.format(config['mode'], config['eval_fold'])
+    from models.ablation import module_flags
+    config["ablation_modules"] = module_flags(config["ablation_variant"])
+    config["exp_str"] += "_{}_seed{}".format(config["ablation_variant"], config["seed"])
     exp_name = f'{ex.path}_{config["exp_str"]}'
     observer = FileStorageObserver.create(os.path.join(config['path']['log_dir'], exp_name))
     ex.observers.append(observer)

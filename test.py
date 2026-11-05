@@ -148,6 +148,7 @@ def evaluate_isic_setting1(model, config, log, run):
         log.info('ISIC %s: %s pairs, Dice %.6f, IoU %.6f', category, len(dataset),
                  category_results[category]['dice'], category_results[category]['iou'])
     results = {
+        'ablation_variant': config['ablation_variant'],
         'fold': config['eval_fold'], 'upstream_commit': UPSTREAM_COMMIT,
         'superpixel_mode': config['isic_superpixel_mode'],
         'checkpoint': config['reload_model_path'], 'categories': category_results,
@@ -167,6 +168,13 @@ def evaluate_isic_setting1(model, config, log, run):
 
 @ex.automain
 def main(_run, _config, _log):
+    from models.ablation import module_flags, validate_checkpoint
+    if not _config['reload_model_path']:
+        raise ValueError('Evaluation requires reload_model_path for the intended run')
+    verified = validate_checkpoint(_config['reload_model_path'], _config)
+    _log.info('Ablation %s: %s', _config['ablation_variant'], module_flags(_config['ablation_variant']))
+    if not verified:
+        _log.warning('Legacy full checkpoint: no ablation metadata; provenance was not verified.')
     if _run.observers:
         os.makedirs(f'{_run.observers[0].dir}/interm_preds', exist_ok=True)
         for source_file, _ in _run.experiment_info['sources']:
@@ -194,7 +202,8 @@ def main(_run, _config, _log):
     torch.set_num_threads(1)
 
     _log.info(f'Create model...')
-    model = FewShotSeg(pretrained_weights=None)
+    model = FewShotSeg(pretrained_weights=None,
+                       ablation_variant=_config["ablation_variant"])
     model.cuda()
     
     # --- 修改开始 ---
@@ -465,6 +474,17 @@ def main(_run, _config, _log):
         return A
     res = dict_Avg(class_dice)
 
+    results = {
+        'ablation_variant': _config['ablation_variant'],
+        'modules': module_flags(_config['ablation_variant']),
+        'dataset': _config['dataset'], 'fold': _config['eval_fold'], 'seed': _config['seed'],
+        'support_index': _config['supp_idx'], 'checkpoint': _config['reload_model_path'],
+        'class_dice': class_dice, 'class_iou': class_iou, 'mean_dice': res,
+        'mean_iou': dict_Avg(class_iou),
+    }
+    if _run.observers:
+        (Path(_run.observers[0].dir) / 'ablation_results.json').write_text(
+            json.dumps(results, indent=2), encoding='utf-8')
     _log.info(f'Total Mean Dice: {res}')
     _log.info(f'End of validation.')
     return 1
