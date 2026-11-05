@@ -1,7 +1,9 @@
 # BSP 三模块消融实验
 
 本分支从完整模型提交 `ebab703` 创建，用五组重新训练的模型验证 SEPC、QRR、SWPA。
-正常版保留在 `main`，本分支为 `ablation`。下表只定义实验，未填写或虚构实验分数。
+正常版保留在 `main`，旧消融版保留在 `ablation` 及标签
+`ablation-before-external-paths`；本分支为 `ablation-external-paths`。
+本版仅含代码、说明与许可文件，数据和权重通过命令指定，详见 `EXTERNAL_PATHS.md`。下表只定义实验，未填写或虚构实验分数。
 
 | 配置 | SEPC | QRR | SWPA | 各类别 Dice | Avg |
 |---|---|---|---|---|---|
@@ -37,38 +39,38 @@ CT 专用的 `train_ct.py/test_ct.py` 未接入开关；本分支使用 `train.p
 新目录克隆：
 
 ```bash
-git clone --branch ablation https://github.com/aihongjian777-crypto/BSP-cvpr.git BSP-ablation
+git clone --branch ablation-external-paths https://github.com/aihongjian777-crypto/BSP-cvpr.git BSP-ablation
 cd BSP-ablation
 ```
 
 沿用原项目的 PyTorch、torchvision、Sacred、OpenCV、SimpleITK 等运行环境。
-数据、权重和实验结果不在仓库中，需要自行准备。编码器预训练权重可设置：
+数据、权重和实验结果不在仓库中，需要自行准备。编码器预训练权重由训练命令的 `pretrained_weights` 指定，不再读取环境变量或内置权重路径：
 
 ```bash
-export BSP_PRETRAINED_WEIGHTS=/你的权重目录/deeplabv3_resnet101_coco-586e9e4e.pth
+python train.py with data_root=/数据/CHAOST2 pretrained_weights=/权重/deeplabv3_resnet101_coco-586e9e4e.pth
 ```
 
 本地独立工作目录默认没有数据和权重。通过 `--data-root` 指向原数据；
-ISIC 还需要准备 `data/isic/class_id.csv`、五折 JSON 和伪标签，详见 `ISIC2018_SERVER.md`。
+ISIC 的五折 JSON 和伪标签也存放在外部，通过 `isic_setting_1_base_path` 指定；详见 `ISIC2018_SERVER.md`。
 
 ## 训练五组
 
 以下以 CHAOST2 第 0 折、随机种子 2025 为例。五组会顺序训练，每组独立初始化：
 
 ```bash
-python scripts/run_ablation.py train --variant all --dataset CHAOST2 --fold 0 --seed 2025 --data-root /数据/CHAOST2
+python scripts/run_ablation.py train --variant all --dataset CHAOST2 --fold 0 --seed 2025 --data-root /数据/CHAOST2 --pretrained-weights /权重/deeplabv3_resnet101_coco-586e9e4e.pth
 ```
 
 先查看将执行的命令：
 
 ```bash
-python scripts/run_ablation.py train --variant all --dataset CHAOST2 --fold 0 --dry-run
+python scripts/run_ablation.py train --variant all --dataset CHAOST2 --fold 0 --dry-run --data-root /数据/CHAOST2 --pretrained-weights /权重/deeplabv3_resnet101_coco-586e9e4e.pth
 ```
 
 单独训练去 QRR：
 
 ```bash
-python scripts/run_ablation.py train --variant wo_qrr --dataset CHAOST2 --fold 0 --seed 2025 --data-root /数据/CHAOST2
+python scripts/run_ablation.py train --variant wo_qrr --dataset CHAOST2 --fold 0 --seed 2025 --data-root /数据/CHAOST2 --pretrained-weights /权重/deeplabv3_resnet101_coco-586e9e4e.pth
 ```
 
 默认训练 50000 步；`--steps`、`--workers` 可调整。该启动器沿用 `config.py` 的
@@ -76,15 +78,15 @@ python scripts/run_ablation.py train --variant wo_qrr --dataset CHAOST2 --fold 0
 需要自定义完整设置时，可直接使用 Sacred 命令，且五组设置必须一致：
 
 ```bash
-python train.py with ablation_wo_qrr dataset=CHAOST2 eval_fold=0 seed=2025
+python train.py with ablation_wo_qrr dataset=CHAOST2 eval_fold=0 seed=2025 data_root=/数据/CHAOST2 pretrained_weights=/权重/deeplabv3_resnet101_coco-586e9e4e.pth
 ```
 
 仅 SEPC 可直接通过命令选择，不需要手工修改模型代码：
 
 ```bash
-python scripts/run_ablation.py train --variant sepc_only --dataset CHAOST2 --fold 0 --seed 2025 --data-root /数据/CHAOST2
+python scripts/run_ablation.py train --variant sepc_only --dataset CHAOST2 --fold 0 --seed 2025 --data-root /数据/CHAOST2 --pretrained-weights /权重/deeplabv3_resnet101_coco-586e9e4e.pth
 # 等价的 Sacred 配置名，也可写成 ablation_variant=sepc_only
-python train.py with ablation_sepc_only dataset=CHAOST2 eval_fold=0 seed=2025
+python train.py with ablation_sepc_only dataset=CHAOST2 eval_fold=0 seed=2025 data_root=/数据/CHAOST2 pretrained_weights=/权重/deeplabv3_resnet101_coco-586e9e4e.pth
 ```
 
 配置名统一决定三个模块的开关；测试时也必须选择对应配置，并提供该组自己的权重。
@@ -92,7 +94,7 @@ python train.py with ablation_sepc_only dataset=CHAOST2 eval_fold=0 seed=2025
 MRI/CT 折号为 0 至 4，ISIC 为 1 至 5。ISIC 示例：
 
 ```bash
-python scripts/run_ablation.py train --variant all --dataset isic --fold 1 --data-root /数据/ISIC2018
+python scripts/run_ablation.py train --variant all --dataset isic --fold 1 --data-root /数据/ISIC2018 --pretrained-weights /权重/deeplabv3_resnet101_coco-586e9e4e.pth --isic-base-path /数据/ISIC_setting_1
 ```
 
 结果目录包含配置、种子和折号，例如：

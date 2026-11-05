@@ -376,6 +376,8 @@ from boundary_loss import BoundaryLoss
 
 @ex.automain
 def main(_run, _config, _log):
+    from models.runtime_paths import validate_runtime_paths
+    validate_runtime_paths(_config, training=True)
     if _run.observers:
         os.makedirs(f'{_run.observers[0].dir}/snapshots', exist_ok=True)
         for source_file, _ in _run.experiment_info['sources']:

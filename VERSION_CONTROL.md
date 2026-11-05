@@ -4,9 +4,9 @@
 
 本仓库管理源码、运行脚本和说明文档。数据集、模型权重、实验输出、
 临时文件、编辑器配置和本地密钥通过 `.gitignore` 排除，不会随代码上传。
-`data/isic` 中的预处理 Python 脚本和上游许可文件保留在版本管理中。
-该目录中的 `class_id.csv`、`ISIC_setting_1/isic_in_5_folds.json` 也是本地数据，
-新机器运行 ISIC 实验时需另行准备；数据和权重路径见 `ISIC2018_SERVER.md`。
+预处理源码位于 `scripts/isic`，上游许可位于 `LICENSES`。
+所有数据、划分清单和权重从外部路径读取，见 `EXTERNAL_PATHS.md`。
+旧版消融的固定备份为标签 `ablation-before-external-paths`，提交 `03a5ae5`。
 
 ## 保存版本并同步 GitHub
 

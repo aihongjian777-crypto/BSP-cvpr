@@ -102,8 +102,8 @@ def generate_all_superpixels(data_root=None, base_path=None, overwrite=False):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--data-root', default=str(DEFAULT_DATA_ROOT))
-    parser.add_argument('--base-path', default=str(DEFAULT_BASE_PATH))
+    parser.add_argument('--data-root', required=True)
+    parser.add_argument('--base-path', required=True)
     parser.add_argument('--check-only', action='store_true', help='Read-only file/manifest check')
     parser.add_argument('--require-superpixels', action='store_true')
     parser.add_argument('--overwrite', action='store_true', help='Regenerate existing pseudo-labels')

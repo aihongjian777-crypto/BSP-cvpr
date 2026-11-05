@@ -22,9 +22,11 @@ def build_command(args, variant):
         'path.log_dir=' + json.dumps(str(ROOT / ('exps_on_ABLATION' if args.mode == 'train'
                                                  else 'results/ablation'))),
     ])
-    if args.data_root:
-        command.append('path.{}.data_dir={}'.format(
-            args.dataset, json.dumps(str(Path(args.data_root).resolve()))))
+    command.append('data_root=' + json.dumps(str(Path(args.data_root).expanduser().resolve())))
+    if args.pretrained_weights:
+        command.append('pretrained_weights=' + json.dumps(str(Path(args.pretrained_weights).expanduser().resolve())))
+    if args.isic_base_path:
+        command.append('isic_setting_1_base_path=' + json.dumps(str(Path(args.isic_base_path).expanduser().resolve())))
     if args.mode == 'test':
         command.extend(['reload_model_path=' + json.dumps(str(Path(args.checkpoint).resolve())),
                         'supp_idx=' + str(args.support_index)])
@@ -40,11 +42,17 @@ def main(argv=None):
     parser.add_argument('--seed', type=int, default=2025)
     parser.add_argument('--steps', type=int, default=50000)
     parser.add_argument('--workers', type=int, default=1)
-    parser.add_argument('--data-root')
+    parser.add_argument('--data-root', required=True)
+    parser.add_argument('--pretrained-weights')
+    parser.add_argument('--isic-base-path')
     parser.add_argument('--checkpoint')
     parser.add_argument('--support-index', type=int, default=1)
     parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args(argv)
+    if args.mode == 'train' and not args.pretrained_weights:
+        parser.error('train requires --pretrained-weights /external/weights.pth')
+    if args.dataset == 'isic' and not args.isic_base_path:
+        parser.error('isic requires --isic-base-path /external/ISIC_setting_1')
     if args.mode == 'test' and (not args.checkpoint or args.variant == 'all'):
         parser.error('test requires one --variant and its own --checkpoint')
     valid_folds = range(1, 6) if args.dataset == 'isic' else range(5)

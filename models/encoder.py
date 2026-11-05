@@ -4,7 +4,6 @@ Backbones supported by torchvison.
 import torch
 import torch.nn as nn
 import torchvision
-import os
 from pathlib import Path
 
 
@@ -14,18 +13,15 @@ class Res101Encoder(nn.Module):
     modify the 'downsample' component in layer2 and/or layer3 and/or layer4 as the vanilla Resnet
     """
 
-    def __init__(self, replace_stride_with_dilation=None, pretrained_weights='resnet101'):
+    def __init__(self, replace_stride_with_dilation=None, pretrained_weights=None):
         super().__init__()
         # None explicitly requests random initialization for isolated smoke tests.
         # Production defaults never silently continue without pretrained weights.
-        filenames = {'deeplabv3': 'deeplabv3_resnet101_coco-586e9e4e.pth',
-                     'resnet101': 'resnet101-63fe2227.pth'}
-        if isinstance(pretrained_weights, str) and pretrained_weights in filenames:
-            path = Path(os.environ.get('BSP_PRETRAINED_WEIGHTS',
-                str(Path(__file__).resolve().parents[1] / 'checkpoints' / filenames[pretrained_weights])))
+        if isinstance(pretrained_weights, (str, Path)):
+            path = Path(pretrained_weights).expanduser()
             if not path.is_file():
-                raise FileNotFoundError('Pretrained checkpoint not found: {}. Set BSP_PRETRAINED_WEIGHTS '
-                                        'or pass an explicit path; None is for untrained smoke tests.'.format(path))
+                raise FileNotFoundError('Pretrained checkpoint not found: {}. Pass '
+                                        'pretrained_weights=/external/weights.pth in the command.'.format(path))
             self.pretrained_weights = torch.load(str(path), map_location='cpu')
         else:
             self.pretrained_weights = pretrained_weights

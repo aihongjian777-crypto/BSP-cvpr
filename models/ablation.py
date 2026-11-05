@@ -23,6 +23,8 @@ def save_metadata(snapshot_dir, config):
         'variant': config['ablation_variant'],
         'modules': module_flags(config['ablation_variant']),
         'dataset': config['dataset'], 'fold': config['eval_fold'], 'seed': config['seed'],
+        'data_root': config.get('path', {}).get(config['dataset'], {}).get('data_dir'),
+        'pretrained_weights': config.get('pretrained_weights'),
         'sepc_off': 'global context; same-class random replacement; retain MLP and boundary prototypes',
         'qrr_off': 'identity on normalized prototypes',
         'swpa_off': 'uniform mean of prototype features and scaled cosine responses',

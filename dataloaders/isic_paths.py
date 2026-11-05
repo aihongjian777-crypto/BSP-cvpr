@@ -3,13 +3,15 @@ import json
 from pathlib import Path
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_DATA_ROOT = PROJECT_ROOT / 'data' / 'ISIC2018'
-DEFAULT_BASE_PATH = PROJECT_ROOT / 'data' / 'isic' / 'ISIC_setting_1'
+DEFAULT_DATA_ROOT = None
+DEFAULT_BASE_PATH = None
 UPSTREAM_COMMIT = '40d0e23d75f81f07bb7f34cb641db51ef490d025'
 CATEGORIES = ('melanoma', 'nevus', 'seborrheic_keratosis')
 
 
 def project_path(value, default):
+    if value is None and default is None:
+        raise ValueError('External path required; supply data_root and ISIC base path explicitly.')
     path = Path(value).expanduser() if value is not None else Path(default)
     return path.resolve() if path.is_absolute() else (PROJECT_ROOT / path).resolve()
 

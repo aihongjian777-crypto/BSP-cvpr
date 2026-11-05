@@ -20,12 +20,13 @@ from dataloaders.isic_paths import (
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--data-root', default=str(DEFAULT_DATA_ROOT))
-    parser.add_argument('--output-root', default=str(DEFAULT_BASE_PATH / 'categorized'))
+    parser.add_argument('--data-root', required=True)
+    parser.add_argument('--output-root', required=True)
+    parser.add_argument('--class-csv', required=True)
     args = parser.parse_args()
     images, masks = image_and_mask_roots(args.data_root)
-    destination = project_path(args.output_root, DEFAULT_BASE_PATH / 'categorized')
-    with (Path(__file__).resolve().parent / 'class_id.csv').open(encoding='utf-8') as stream:
+    destination = project_path(args.output_root, None)
+    with Path(args.class_csv).expanduser().open(encoding='utf-8') as stream:
         rows = list(csv.DictReader(stream))
     pairs = []
     for row in rows:

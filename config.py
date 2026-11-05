@@ -20,7 +20,7 @@ ex = Experiment("CoW", save_git_info=False)
 ex.captured_out_filter = apply_backspaces_and_linefeeds
 
 ###### Set up source folder ######
-source_folders = ['.', './dataloaders', './models', './utils', './data/isic']
+source_folders = ['.', './dataloaders', './models', './utils', './scripts/isic']
 sources_to_save = list(itertools.chain.from_iterable(
     [glob.glob(f'{folder}/*.py') for folder in source_folders]))
 for source_file in sources_to_save:
@@ -49,16 +49,17 @@ def cfg():
     allow_gt_fallback = False  # Require explicit opt-in to the historical anatomical-label fallback.
     exclude_label_mode = 'all'  # Historical slice-level AND. 'any' is an explicit protocol change.
     superpix_scale = 'MIDDLE'
-    pretrained_weights = 'deeplabv3'
+    data_root = None  # Required: data_root=/external/dataset
+    pretrained_weights = None  # Training: pretrained_weights=/external/resnet_weights.pth
     allow_partial_checkpoint = False  # Evaluation is strict unless explicitly overridden.
     eval_fold = 0  # (0-4) for 5-fold cross-validation
     test_label = [1, 2, 3, 4]  # for evaluation
     supp_idx = 1  # choose which case as the support set for evaluation, (0-4) for 'CHAOST2', (0-7) for 'CMR'
     n_part = 3  # for evaluation, i.e. 3 chunks
 
-    # FoB_SAM ISIC Setting I paths follow the project when copied to a server.
+    # ISIC manifests and generated pseudo-labels are stored externally.
     isic_setting = 1
-    isic_setting_1_base_path = str(Path(__file__).resolve().parent / 'data' / 'isic' / 'ISIC_setting_1')
+    isic_setting_1_base_path = None
     isic_image_size = 256
     isic_superpixel_mode = 'upstream'  # corrected is an explicit protocol variant.
     save_isic_predictions = True
@@ -95,11 +96,10 @@ def cfg():
 
     path = {
         'log_dir': './runs',
-        # 🔥🔥 [Fix] 把 CoW1 改成 CoW-Linest (根据你终端显示的真实路径)
-        'CHAOST2': {'data_dir': str(Path(__file__).resolve().parent / 'data' / 'CHAOST2')},
-        'SABS': {'data_dir': str(Path(__file__).resolve().parent / 'data' / 'SABS')},
-        'CMR': {'data_dir': str(Path(__file__).resolve().parent / 'data' / 'CMR')},
-        'isic': {'data_dir': str(Path(__file__).resolve().parent / 'data' / 'ISIC2018')},
+        'CHAOST2': {'data_dir': None},
+        'SABS': {'data_dir': None},
+        'CMR': {'data_dir': None},
+        'isic': {'data_dir': None},
     }
 
 
@@ -148,6 +148,12 @@ def ablation_sepc_only():
 @ex.config_hook
 def add_observer(config, command_name, logger):
     """A hook fucntion to add observer"""
+    if config.get('data_root'):
+        config['data_root'] = str(Path(config['data_root']).expanduser().resolve())
+        config['path'].setdefault(config['dataset'], {})['data_dir'] = config['data_root']
+    for key in ('pretrained_weights', 'isic_setting_1_base_path', 'reload_model_path'):
+        if config.get(key):
+            config[key] = str(Path(config[key]).expanduser().resolve())
     for key in ('test_label', 'exclude_label'):
         if isinstance(config.get(key), str):
             config[key] = ast.literal_eval(config[key])

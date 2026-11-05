@@ -26,12 +26,13 @@ Thumbs.db
 *.key
 credentials.json
 
-# Datasets: retain only preprocessing source and its upstream license
-/data/*
-!/data/isic/
-/data/isic/*
-!/data/isic/*.py
-!/data/isic/FoB_SAM_LICENSE.txt
+# Dataset resources are supplied externally; preprocessing source lives in scripts/isic.
+/data/
+/datasets/
+/pretrained/
+*.nii
+*.nii.gz
+*.dcm
 
 # Model weights and serialized arrays
 /checkpoints/

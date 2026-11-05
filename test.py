@@ -168,6 +168,8 @@ def evaluate_isic_setting1(model, config, log, run):
 
 @ex.automain
 def main(_run, _config, _log):
+    from models.runtime_paths import validate_runtime_paths
+    validate_runtime_paths(_config, training=False)
     from models.ablation import module_flags, validate_checkpoint
     if not _config['reload_model_path']:
         raise ValueError('Evaluation requires reload_model_path for the intended run')

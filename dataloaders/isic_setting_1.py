@@ -114,7 +114,7 @@ class ISICDataset(data.Dataset):
         missing = [path for path in self.images + self.gts if not os.path.isfile(path)]
         if missing:
             raise FileNotFoundError('Missing {} data files; first: {}. Run '
-                                    'data/isic/prepare_setting1_dataset.py first.'.format(
+                                    'scripts/isic/prepare_setting1_dataset.py with external paths first.'.format(
                                         len(missing), missing[0]))
         self.train = train
         self.sam_trans = sam_trans

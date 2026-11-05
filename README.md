@@ -1,54 +1,46 @@
-# BSP module ablations
+# BSP 外部资源路径消融版
 
-This is the `ablation` branch. The original complete-model snapshot remains on `main`.
-Five configurations are available: `full`, `wo_sepc`, `wo_qrr`, `wo_swpa`, and `sepc_only`.
-See [the ablation guide](ABLATION.md) for exact replacement definitions, training,
-evaluation, and the module-checkmark results table. Each variant must be trained separately.
+本版分支为 `ablation-external-paths`。项目只包含源码、脚本、说明和许可，
+数据集、划分清单、预训练权重与实验输出均独立存放。
+训练命令用 `data_root=... pretrained_weights=...` 指定资源，无需修改源码。
 
-# FSMIS via CoW
-Codes for the following paper:
-Concentrate on Weakness: Mining Hard Prototypes for Few-Shot Medical Image Segmentation
+旧版五组消融固定保存在标签
+[`ablation-before-external-paths`](https://github.com/aihongjian777-crypto/BSP-cvpr/tree/ablation-before-external-paths)，
+原 `ablation` 分支和正常版 `main` 仍保留。
 
-### Abstract
-Few-Shot Medical Image Segmentation (FSMIS) has been widely used to train a model that can perform segmentation from only a few annotated images. However, most existing prototype-based FSMIS methods generate multiple prototypes from the support image solely by random sampling or local averaging, which can cause particularly severe boundary blurring due to the tendency for normal features accounting for the majority of features of a specific category. Consequently, we propose to focus more attention to those weaker features that are crucial for clear segmentation boundary. Specifically, we design a Support Self-prediction (SSP) module to identify such weak features by comparing true support mask with one predicted by global support prototype. Then, a Hard Prototype Generation (HPG) module is employed to generate multiple hard prototypes based on these weak features. Subsequently, a Multiple Similarity Maps Fusion (MSMF) module is devised to generate final segmenting mask in a dual-path fashion to mitigate the imbalance between foreground and background in medical images. Furthermore, we introduce a boundary loss to further constraint the edge of segmentation. Extensive experiments on three publicly available medical image datasets demonstrate that our method achieves state-of-the-art performance.
+## 开始实验
 
-![image](CoW\CoW.png)
-
-### Dependencies
-Please install following essential dependencies:
-```
-dcm2nii
-json5==0.8.5
-jupyter==1.0.0
-nibabel==2.5.1
-numpy==1.22.0
-opencv-python==4.5.5.62
-Pillow>=8.1.1
-sacred==0.8.2
-scikit-image==0.18.3
-SimpleITK==1.2.3
-torch==1.10.2
-torchvision=0.11.2
-tqdm==4.62.3
+```bash
+git clone --branch ablation-external-paths https://github.com/aihongjian777-crypto/BSP-cvpr.git BSP-ablation-external
+cd BSP-ablation-external
+python train.py with ablation_variant=sepc_only mode=train dataset=CHAOST2 eval_fold=2 n_steps=50000 max_iters_per_load=5000 lr_step_gamma=0.9 use_gt=False exclude_label=None n_way=1 n_shot=1 n_query=1 batch_size=1 num_workers=4 seed=1234 save_snapshot_every=5000 data_root=/datasets/CHAOST2 pretrained_weights=/pretrained/deeplabv3_resnet101_coco-586e9e4e.pth path.log_dir=/experiments/BSP
 ```
 
-### Datasets and pre-processing
-Download:
-1) **Abd-MRI**: [Combined Healthy Abdominal Organ Segmentation data set](https://chaos.grand-challenge.org/)
-2) **Abd-CT**: [Multi-Atlas Abdomen Labeling Challenge](https://www.synapse.org/#!Synapse:syn3193805/wiki/218292)
-3) **CMR**: [Multi-sequence Cardiac MRI Segmentation data set (bSSFP fold)](https://zmiclab.github.io/projects/mscmrseg19/) 
+把路径替换成实际位置。`ablation_variant` 可取 `full`、`sepc_only`、`wo_sepc`、
+`wo_qrr`、`wo_swpa`。正式比较时，每组使用相同数据协议、预训练来源和训练预算，独立训练。
 
-Pre-processing is performed according to [Ouyang et al.](https://github.com/cheng-01037/Self-supervised-Fewshot-Medical-Image-Segmentation/tree/2f2a22b74890cb9ad5e56ac234ea02b9f1c7a535) and we follow the procedure on their github repository.
-Supervoxel segmentation is performed according to [Hansen et al.](https://github.com/sha168/ADNet.git) and we follow the procedure on their github repository.  
+- [外部路径与完整训练测试命令](EXTERNAL_PATHS.md)
+- [模块关闭定义与五组实验表](ABLATION.md)
+- [ISIC Setting I 外部数据准备](ISIC2018_SERVER.md)
+- [版本保存与恢复](VERSION_CONTROL.md)
 
-### Training
-1. Compile `./data/supervoxels/felzenszwalb_3d_cy.pyx` with cython (`python ./data/supervoxels/setup.py build_ext --inplace`) and run `./data/supervoxels/generate_supervoxels.py` 
-2. Download pre-trained ResNet-101 weights [vanilla version](https://download.pytorch.org/models/resnet101-63fe2227.pth) or [deeplabv3 version](https://download.pytorch.org/models/deeplabv3_resnet101_coco-586e9e4e.pth) and put your checkpoints folder, then replace the absolute path in the code `./models/encoder.py`.  
-3. Run `./scripts/train_abd_mri.sh` 
+## 环境和数据
 
-### Inference
-Run `./scripts/test_abd_mri.sh` 
+沿用原项目可运行的 Python/CUDA 环境，包括 PyTorch、torchvision、numpy、
+OpenCV、Sacred、SimpleITK、SciPy、scikit-image、Pillow、tqdm 等。
+本次修改不安装或更换训练依赖，也不修改网络计算及损失系数。
+MRI/CT 数据根目录仍需保持原加载器要求的图像、标注和伪标签布局。
+ISIC 预处理源码位于 `scripts/isic`，数据与元数据目录通过参数指定。
+模型检查点旁保存 `ablation.json`，测试必须使用相同实验组、折号和种子。
 
-### Acknowledgement
-This code is based on [SSL-ALPNet](https://arxiv.org/abs/2007.09886v2) (ECCV'20) by [Ouyang et al.](https://github.com/cheng-01037/Self-supervised-Fewshot-Medical-Image-Segmentation.git) and [ADNet](https://www.sciencedirect.com/science/article/pii/S1361841522000378) by [Hansen et al.](https://github.com/sha168/ADNet.git). 
+## 来源说明
 
+本项目包含对 CoW 和 DIFD 的继承与适配：
+
+- [CoW](https://github.com/jcjiang99/CoW)
+- [DIFD](https://github.com/zmcheng9/DIFD)
+- 原数据流程参考 [SSL-ALPNet](https://github.com/cheng-01037/Self-supervised-Fewshot-Medical-Image-Segmentation)
+  和 [ADNet](https://github.com/sha168/ADNet)。
+- ISIC Setting I 数据流程适配自 FoB_SAM 固定提交
+  `40d0e23d75f81f07bb7f34cb641db51ef490d025`，许可保留在
+  [LICENSES/FoB_SAM_LICENSE.txt](LICENSES/FoB_SAM_LICENSE.txt)。
