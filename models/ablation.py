@@ -1,4 +1,3 @@
-"""Named module controls and checkpoint provenance, without ML dependencies."""
 import json
 from pathlib import Path
 
@@ -25,7 +24,7 @@ def save_metadata(snapshot_dir, config):
         'dataset': config['dataset'], 'fold': config['eval_fold'], 'seed': config['seed'],
         'data_root': config.get('path', {}).get(config['dataset'], {}).get('data_dir'),
         'pretrained_weights': config.get('pretrained_weights'),
-        'sepc_off': 'global context; same-class random replacement; retain MLP and boundary prototypes',
+        'sepc_off': 'global context; same-class random replacement; retain SEPCPrototypeMLP and boundary prototypes',
         'qrr_off': 'identity on normalized prototypes',
         'swpa_off': 'uniform mean of prototype features and scaled cosine responses',
     }
@@ -35,13 +34,13 @@ def save_metadata(snapshot_dir, config):
 
 
 def validate_checkpoint(checkpoint, config):
-    """State shapes alone cannot distinguish the ablation configurations."""
+
     sidecar = Path(checkpoint).parent / 'ablation.json'
     if not sidecar.is_file():
         if config['ablation_variant'] != 'full':
             raise ValueError('Ablated checkpoints require ablation.json beside the weights; '
                              'do not evaluate full-model weights as an ablation.')
-        return False  # Original main-branch checkpoints are supported for full only.
+        return False
     metadata = json.loads(sidecar.read_text(encoding='utf-8'))
     expected = {
         'variant': config['ablation_variant'],

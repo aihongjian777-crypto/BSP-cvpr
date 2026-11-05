@@ -39,7 +39,7 @@ CT 专用的 `train_ct.py/test_ct.py` 未接入开关；本分支使用 `train.p
 新目录克隆：
 
 ```bash
-git clone --branch ablation-external-paths https://github.com/aihongjian777-crypto/BSP-cvpr.git BSP-ablation
+git clone --branch bsp-standard https://github.com/aihongjian777-crypto/BSP-cvpr.git BSP-ablation
 cd BSP-ablation
 ```
 
@@ -100,7 +100,7 @@ python scripts/run_ablation.py train --variant all --dataset isic --fold 1 --dat
 结果目录包含配置、种子和折号，例如：
 
 ```text
-exps_on_ABLATION/CoW_train_CHAOST2_cv0_wo_qrr_seed2025/<运行编号>/snapshots/
+exps_on_ABLATION/BSP_train_CHAOST2_cv0_wo_qrr_seed2025/<运行编号>/snapshots/
   50000.pth
   ablation.json
 ```

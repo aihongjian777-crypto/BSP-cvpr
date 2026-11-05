@@ -10,7 +10,7 @@
 ## 获取新版本
 
 ```bash
-git clone --branch ablation-external-paths https://github.com/aihongjian777-crypto/BSP-cvpr.git BSP-ablation-external
+git clone --branch bsp-standard https://github.com/aihongjian777-crypto/BSP-cvpr.git BSP-ablation-external
 cd BSP-ablation-external
 ```
 
@@ -72,7 +72,7 @@ python scripts/run_ablation.py train --variant sepc_only --dataset CHAOST2 --fol
 测试无需再提供编码器预训练权重，但必须指定数据和该实验组训练出的模型：
 
 ```bash
-python test.py with ablation_variant=sepc_only mode=test dataset=CHAOST2 eval_fold=2 seed=1234 supp_idx=1 num_workers=4 data_root=/datasets/CHAOST2 reload_model_path=/experiments/BSP/CoW_train_CHAOST2_cv2_sepc_only_seed1234/1/snapshots/50000.pth path.log_dir=/experiments/BSP-results
+python test.py with ablation_variant=sepc_only mode=test dataset=CHAOST2 eval_fold=2 seed=1234 supp_idx=1 num_workers=4 data_root=/datasets/CHAOST2 reload_model_path=/experiments/BSP/BSP_train_CHAOST2_cv2_sepc_only_seed1234/1/snapshots/50000.pth path.log_dir=/experiments/BSP-results
 ```
 
 实际运行编号可能不是 `1`，请选对应运行生成的权重。权重旁的 `ablation.json`

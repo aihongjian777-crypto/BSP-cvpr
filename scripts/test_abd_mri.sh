@@ -1,24 +1,21 @@
 #!/bin/bash
-# test a model to segment abdominal MRI
 GPUID1=1
 export CUDA_VISIBLE_DEVICES=$GPUID1
 
-###### Shared configs ######
-DATASET='CHAOST2'   # 'CMR' or 'SABS'
+DATASET='CHAOST2'
 NWORKER=16
 RUNS=1
-ALL_EV=(0 1 2 3 4) # 5-fold cross validation (0, 1, 2, 3, 4)
+ALL_EV=(0 1 2 3 4)
 TEST_LABEL=[1,2,3,4]
-###### Training configs ######
 NSTEP=50000
 DECAY=0.98
 
-MAX_ITER=5000 # defines the size of an epoch
-SNAPSHOT_INTERVAL=50000 # interval for saving snapshot
+MAX_ITER=5000
+SNAPSHOT_INTERVAL=50000
 SEED=2025
 
-N_PART=3 # defines the number of chunks for evaluation
-ALL_SUPP=(2) # CHAOST2: 0-4, CMR: 0-7
+N_PART=3
+ALL_SUPP=(2)
 echo ========================================================================
 for EVAL_FOLD in "${ALL_EV[@]}"
 do
@@ -32,8 +29,7 @@ do
   fi
   for SUPP_IDX in "${ALL_SUPP[@]}"
   do
-    # RELOAD_PATH='please feed the absolute path to the trained weights here' # path to the reloaded model
-    RELOAD_MODEL_PATH="/media/CoW/exps_on_CHAOST2/CoW_train_CHAOST2_cv${EVAL_FOLD}/1/snapshots/50000.pth"
+    RELOAD_MODEL_PATH="/media/BSP/exps_on_CHAOST2/BSP_train_CHAOST2_cv${EVAL_FOLD}/1/snapshots/50000.pth"
     python3 test.py with \
     mode="test" \
     dataset=$DATASET \

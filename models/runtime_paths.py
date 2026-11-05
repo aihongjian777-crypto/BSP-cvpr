@@ -1,4 +1,3 @@
-"""Validate command-supplied resources before allocating a model or using CUDA."""
 from pathlib import Path
 
 

@@ -1,8 +1,3 @@
-"""FoB_SAM Setting I loader adapted for portable BSP data paths.
-
-Source: primebo1/FoB_SAM @ 40d0e23d75f81f07bb7f34cb641db51ef490d025.
-superpixel_mode='upstream' retains upstream interpolation and integer indexing.
-"""
 import os
 import torch.utils.data as data
 import numpy as np
@@ -17,7 +12,7 @@ from dataloaders.isic_paths import (
 )
 
 IMAGENET_MEAN = np.array([0.40, 0.40, 0.40])
-IMAGENET_STD  = np.array([0.22, 0.22, 0.22])
+IMAGENET_STD = np.array([0.22, 0.22, 0.22])
 ISIC_SETTING_1_CATEGORIES = ['melanoma', 'nevus', 'seborrheic_keratosis']
 ISIC_SETTING_1_SPLIT_FILE = 'isic_in_5_folds.json'
 
@@ -283,7 +278,7 @@ class SuperpixISICDataset(ISICDataset):
             fg = self.resize_image(fg)
 
             if self.superpixel_mode == 'upstream':
-                gt[1 - fg] = 0  # Intentional upstream indexing; recorded in experiment config.
+                gt[1 - fg] = 0
             else:
                 gt[fg == 0] = 0
 
@@ -320,16 +315,16 @@ class SuperpixISICDataset(ISICDataset):
             support_image = self.resize_image(support_image)
             support_image = self.minmax(support_image)
             support_gt = self.resize_image(support_gt)
-            support_sp = (support_gt > 0).astype(np.uint8)  # Foreground and background only
+            support_sp = (support_gt > 0).astype(np.uint8)
 
-            query_index = (index + 1) % self.size  # Use the next image as the query image
+            query_index = (index + 1) % self.size
             query_image = self.cv2_loader(self.images[query_index], is_mask=False)
 
             query_gt = self.cv2_loader(self.gts[query_index], is_mask=True)
             query_image = self.resize_image(query_image)
             query_image = self.minmax(query_image)
             query_gt = self.resize_image(query_gt)
-            query_sp = (query_gt > 0).astype(np.uint8)  # Foreground and background only
+            query_sp = (query_gt > 0).astype(np.uint8)
 
             dataset = self.get_dataset_name_from_path(self.images[index])
 
@@ -350,7 +345,7 @@ class SuperpixISICDataset(ISICDataset):
         return 1 - label_erode
 
 
-def get_superpix_isic_dataset(image_size=(256,256), sam_trans=None, image_root=None, gt_root=None,
+def get_superpix_isic_dataset(image_size=(256, 256), sam_trans=None, image_root=None, gt_root=None,
                               train=True, base_path=None, fold=None, category=None,
                               data_root=None, superpixel_mode='upstream'):
     transform_train, transform_test = get_polyp_transform()

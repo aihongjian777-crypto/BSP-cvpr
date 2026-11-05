@@ -45,27 +45,26 @@ class ASPP(nn.Module):
 
     def forward(self, x):
         feature_size = x.shape[-2:]
-        global_feature = F.avg_pool2d(x, kernel_size=feature_size)  # [8, 256, 1, 1]
+        global_feature = F.avg_pool2d(x, kernel_size=feature_size)
 
         global_feature = self.layer6_0(global_feature)
 
-        global_feature = global_feature.expand(-1, -1, feature_size[0], feature_size[1])  # [8, 256, 41, 41]
+        global_feature = global_feature.expand(-1, -1, feature_size[0], feature_size[1])
         out = torch.cat(
             [global_feature, self.layer6_1(x), self.layer6_2(x), self.layer6_3(x), self.layer6_4(x)], dim=1)
-        return out  # [8, 1280, 41, 41]   1280=256*5
+        return out
 
 
-class Decoder(nn.Module):
+class SWPADecoder(nn.Module):
     def __init__(self, reduce_dim=512, in_ch=1027):
-        super(Decoder, self).__init__()
+        super(SWPADecoder, self).__init__()
 
-        # self.ASPP = ASPP()
         self.merge = nn.Sequential(
             nn.Conv2d(in_ch, 512, kernel_size=1, padding=0, bias=False),
             nn.ReLU(inplace=True),
             nn.Dropout2d(p=0.2)
-            # nn.Conv2d(512, reduce_dim, kernel_size=1, padding=0, bias=False),
-            # nn.ReLU(inplace=True),
+
+
         )
 
         self.res1 = nn.Sequential(
@@ -87,20 +86,12 @@ class Decoder(nn.Module):
             nn.Conv2d(reduce_dim, 1, kernel_size=1, padding=0, bias=False)
         )
 
-
-
     def forward(self, x):
 
         x = self.merge(x)
-        # x = self.ASPP(x)
+
         x = self.res1(x)
         x = self.res2(x) + x
         out = self.cls(x)
 
         return out
-
-# decoder = Decoder()
-# fts = torch.rand(8, 1026, 64, 64)
-# y = decoder(fts)
-# res = torch.cat([y, y], dim=1)
-# print(y.size(), res.size())

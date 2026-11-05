@@ -39,7 +39,7 @@ python scripts/isic/split.py --data-root /datasets/ISIC2018 --class-csv /dataset
 
 ```bash
 python train.py with isic_setting1 ablation_variant=full eval_fold=1 seed=1234 data_root=/datasets/ISIC2018 isic_setting_1_base_path=/datasets/ISIC_setting_1 pretrained_weights=/pretrained/deeplabv3_resnet101_coco-586e9e4e.pth path.log_dir=/experiments/BSP
-python test.py with isic_setting1 mode=test ablation_variant=full eval_fold=1 seed=1234 data_root=/datasets/ISIC2018 isic_setting_1_base_path=/datasets/ISIC_setting_1 reload_model_path=/experiments/BSP/CoW_train_isic_setting1_cv1_full_seed1234/1/snapshots/50000.pth path.log_dir=/experiments/BSP-results
+python test.py with isic_setting1 mode=test ablation_variant=full eval_fold=1 seed=1234 data_root=/datasets/ISIC2018 isic_setting_1_base_path=/datasets/ISIC_setting_1 reload_model_path=/experiments/BSP/BSP_train_isic_setting1_cv1_full_seed1234/1/snapshots/50000.pth path.log_dir=/experiments/BSP-results
 ```
 
 运行编号和权重路径按实际训练输出调整；保留同目录 `ablation.json`。

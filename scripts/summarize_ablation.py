@@ -1,4 +1,3 @@
-"""Export class-macro Dice rows for one dataset, requiring matched evaluations."""
 import argparse
 import csv
 import json

@@ -1,4 +1,3 @@
-"""Checks for explicit resource paths; no dataset or ML installation needed."""
 from pathlib import Path
 from types import SimpleNamespace
 import sys

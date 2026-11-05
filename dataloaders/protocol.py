@@ -1,4 +1,3 @@
-"""Explicit slice-level exclusion semantics; no change to legacy default AND."""
 import numpy as np
 
 

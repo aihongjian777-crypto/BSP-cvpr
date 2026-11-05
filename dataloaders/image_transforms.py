@@ -1,8 +1,3 @@
-"""
-Image Transformation
-Code originally from Ouyang et al. (used in the 2D setting)
-"""
-
 from collections.abc import Sequence
 import cv2
 import numpy as np
@@ -12,20 +7,19 @@ from scipy.ndimage.interpolation import map_coordinates
 from numpy.lib.stride_tricks import as_strided
 
 
-###### UTILITIES ######
 def random_num_generator(config, random_state=np.random):
     if config[0] == 'uniform':
         ret = random_state.uniform(config[1], config[2], 1)[0]
     elif config[0] == 'lognormal':
         ret = random_state.lognormal(config[1], config[2], 1)[0]
     else:
-        # print(config)
+
         raise Exception('unsupported format')
     return ret
 
 
 def get_translation_matrix(translation):
-    """ translation: [tx, ty] """
+
     tx, ty = translation
     translation_matrix = np.array([[1, 0, tx],
                                    [0, 1, ty],
@@ -65,19 +59,7 @@ def get_shear_matrix(shear_angle):
     return shear_matrix
 
 
-###### AFFINE TRANSFORM ######
 class RandomAffine(object):
-    """Apply random affine transformation on a numpy.ndarray (H x W x C)
-    Comment by co1818: this is still doing affine on 2d (H x W plane).
-                        A same transform is applied to all C channels
-
-    Parameter:
-    ----------
-
-    alpha: Range [0, 4] seems good for small images
-
-    order: interpolation method (c.f. opencv)
-    """
 
     def __init__(self,
                  rotation_range=None,
@@ -87,30 +69,6 @@ class RandomAffine(object):
                  zoom_keep_aspect=False,
                  interp='bilinear',
                  order=3):
-        """
-        Perform an affine transforms.
-
-        Arguments
-        ---------
-        rotation_range : one integer or float
-            image will be rotated randomly between (-degrees, degrees)
-
-        translation_range : (x_shift, y_shift)
-            shifts in pixels
-
-        *NOT TESTED* shear_range : float
-            image will be sheared randomly between (-degrees, degrees)
-
-        zoom_range : (zoom_min, zoom_max)
-            list/tuple with two floats between [0, infinity).
-            first float should be less than the second
-            lower and upper bounds on percent zoom.
-            Anything less than 1.0 will zoom in on the image,
-            anything greater than 1.0 will zoom out on the image.
-            e.g. (0.7, 1.0) will only zoom in,
-                 (1.0, 1.4) will only zoom out,
-                 (0.7, 1.4) will randomly zoom in or out
-        """
 
         self.rotation_range = rotation_range
         self.translation_range = translation_range
@@ -148,23 +106,21 @@ class RandomAffine(object):
         return final_tfx.astype(np.float32)
 
     def __call__(self, image):
-        # build matrix
+
         input_shape = image.shape[:2]
         M = self.build_M(input_shape)
 
         res = np.zeros_like(image)
-        # if isinstance(self.interp, Sequence):
+
         if type(self.order) is list or type(self.order) is tuple:
             for i, intp in enumerate(self.order):
                 res[..., i] = affine_transform_via_M(image[..., i], M[:2], interp=intp)
         else:
-            # squeeze if needed
+
             orig_shape = image.shape
             image_s = np.squeeze(image)
             res = affine_transform_via_M(image_s, M[:2], interp=self.order)
             res = res.reshape(orig_shape)
-
-            # res = affine_transform_via_M(image, M[:2], interp=self.order)
 
         return res
 
@@ -173,25 +129,16 @@ def affine_transform_via_M(image, M, borderMode=cv2.BORDER_CONSTANT, interp=cv2.
     imshape = image.shape
     shape_size = imshape[:2]
 
-    # Random affine
     warped = cv2.warpAffine(image.reshape(shape_size + (-1,)), M, shape_size[::-1],
                             flags=interp, borderMode=borderMode)
-
-    # print(imshape, warped.shape)
 
     warped = warped[..., np.newaxis].reshape(imshape)
 
     return warped
 
 
-###### ELASTIC TRANSFORM ######
 def elastic_transform(image, alpha=1000, sigma=30, spline_order=1, mode='nearest', random_state=np.random):
-    """Elastic deformation of image as described in [Simard2003]_.
-    .. [Simard2003] Simard, Steinkraus and Platt, "Best Practices for
-       Convolutional Neural Networks applied to Visual Document Analysis", in
-       Proc. of the International Conference on Document Analysis and
-       Recognition, 2003.
-    """
+
     assert image.ndim == 3
     shape = image.shape[:2]
 
@@ -210,21 +157,6 @@ def elastic_transform(image, alpha=1000, sigma=30, spline_order=1, mode='nearest
 
 
 def elastic_transform_nd(image, alpha, sigma, random_state=None, order=1, lazy=False):
-    """Expects data to be (nx, ny, n1 ,..., nm)
-    params:
-    ------
-
-    alpha:
-    the scaling parameter.
-    E.g.: alpha=2 => distorts images up to 2x scaling
-
-    sigma:
-    standard deviation of gaussian filter.
-    E.g.
-         low (sig~=1e-3) => no smoothing, pixelated.
-         high (1/5 * imsize) => smooth, more like affine.
-         very high (1/2*im_size) => translation
-    """
 
     if random_state is None:
         random_state = np.random.RandomState(None)
@@ -233,14 +165,12 @@ def elastic_transform_nd(image, alpha, sigma, random_state=None, order=1, lazy=F
     imsize = shape[:2]
     dim = shape[2:]
 
-    # Random affine
     blur_size = int(4 * sigma) | 1
     dx = cv2.GaussianBlur(random_state.rand(*imsize) * 2 - 1,
                           ksize=(blur_size, blur_size), sigmaX=sigma) * alpha
     dy = cv2.GaussianBlur(random_state.rand(*imsize) * 2 - 1,
                           ksize=(blur_size, blur_size), sigmaX=sigma) * alpha
 
-    # use as_strided to copy things over across n1...nn channels
     dx = as_strided(dx.astype(np.float32),
                     strides=(0,) * len(dim) + (4 * shape[1], 4),
                     shape=dim + (shape[0], shape[1]))
@@ -251,16 +181,13 @@ def elastic_transform_nd(image, alpha, sigma, random_state=None, order=1, lazy=F
                     shape=dim + (shape[0], shape[1]))
     dy = np.transpose(dy, axes=(-2, -1) + tuple(range(len(dim))))
 
-    # coord = np.meshgrid(*[np.arange(shape_i) for shape_i in (shape[1], shape[0]) + dim])
-    # indices = [np.reshape(e + de, (-1, 1)) for e, de in zip([coord[1], coord[0]] + coord[2:],
-    #                                                         [dy, dx] + [0] * len(dim))]
     coord = np.meshgrid(*[np.arange(shape_i) for shape_i in (shape[1], shape[0]) + dim])
-    
+
     indices = [np.reshape(e + de, (-1, 1)) for e, de in zip(
-        [coord[1], coord[0]] + list(coord[2:]),   # ← cast to list
+        [coord[1], coord[0]] + list(coord[2:]),
         [dy, dx] + [0] * len(dim)
     )]
-    
+
     if lazy:
         return indices
 
@@ -268,8 +195,6 @@ def elastic_transform_nd(image, alpha, sigma, random_state=None, order=1, lazy=F
 
 
 class ElasticTransform(object):
-    """Apply elastic transformation on a numpy.ndarray (H x W x C)
-    """
 
     def __init__(self, alpha, sigma, order=1):
         self.alpha = alpha
@@ -291,33 +216,18 @@ class ElasticTransform(object):
 class RandomFlip3D(object):
 
     def __init__(self, h=True, v=True, t=True, p=0.5):
-        """
-        Randomly flip an image horizontally and/or vertically with
-        some probability.
 
-        Arguments
-        ---------
-        h : boolean
-            whether to horizontally flip w/ probability p
-
-        v : boolean
-            whether to vertically flip w/ probability p
-
-        p : float between [0,1]
-            probability with which to apply allowed flipping operations
-        """
         self.horizontal = h
         self.vertical = v
         self.depth = t
         self.p = p
 
     def __call__(self, x, y=None):
-        # horizontal flip with p = self.p
+
         if self.horizontal:
             if np.random.random() < self.p:
                 x = x[::-1, ...]
 
-        # vertical flip with p = self.p
         if self.vertical:
             if np.random.random() < self.p:
                 x = x[:, ::-1, ...]

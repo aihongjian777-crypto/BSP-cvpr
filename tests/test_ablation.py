@@ -1,4 +1,3 @@
-"""CPU checks for the actual model methods, without allocating the ResNet/MLPs."""
 import ast
 import json
 from pathlib import Path
@@ -46,7 +45,7 @@ class ProvenanceTests(unittest.TestCase):
             for variant in VARIANTS:
                 path = Path(folder) / (variant + '.json')
                 path.write_text(json.dumps(dict(ablation_variant=variant, dataset='CHAOST2',
-                    fold=0, seed=2025, support_index=1, class_dice={'LIVER': 0.8, 'RK': 0.6})))
+                                                fold=0, seed=2025, support_index=1, class_dice={'LIVER': 0.8, 'RK': 0.6})))
                 paths.append(path)
             rows = summarize(paths)
             self.assertEqual(len(rows), 5)
@@ -61,12 +60,12 @@ class ProvenanceTests(unittest.TestCase):
 class ModelTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        tree = ast.parse((ROOT / 'models/cow.py').read_text(encoding='utf-8'))
+        tree = ast.parse((ROOT / 'models/bsp.py').read_text(encoding='utf-8'))
         model_class = next(node for node in tree.body if isinstance(node, ast.ClassDef)
-                           and node.name == 'FewShotSeg')
+                           and node.name == 'BSPModel')
         namespace = dict(torch=torch, nn=nn, F=F, np=np, cv2=cv2, random=random)
         exec(compile(ast.Module(body=[model_class], type_ignores=[]), 'model_methods', 'exec'), namespace)
-        cls.model_class = namespace['FewShotSeg']
+        cls.model_class = namespace['BSPModel']
         torch.set_num_threads(1)
 
     def make_model(self, variant):
@@ -76,7 +75,7 @@ class ModelTests(unittest.TestCase):
             setattr(model, 'use_' + name, value)
         model.device = torch.device('cpu')
         model.scaler = 20.0
-        model.ifr_chunk_size = 2
+        model.prototype_chunk_size = 2
         model.fuse = nn.Conv2d(2, 1, 1, bias=False)
         model.fuse.weight.data[:] = torch.tensor([0.2, 0.7]).view(1, 2, 1, 1)
         return model
@@ -87,7 +86,7 @@ class ModelTests(unittest.TestCase):
                 torch.ones(1, 4, 4), torch.tensor([0.4]), torch.tensor([-0.2]))
 
     def dense_reference(self, model, pts, query, support, mask, tq, ts):
-        # Independent, unchunked definition of QRR followed by aggregation.
+
         base = F.normalize(pts[:-1], dim=-1)
         query_unit = F.normalize(query, dim=1)
         if model.use_qrr:
@@ -116,7 +115,7 @@ class ModelTests(unittest.TestCase):
             inputs = list(self.inputs())
             inputs[0].requires_grad_()
             inputs[1].requires_grad_()
-            actual = model.IFR_FD(*inputs)
+            actual = model.QRR_SWPA(*inputs)
             expected = self.dense_reference(model, *inputs)
             self.assertTrue(torch.allclose(actual, expected, atol=3e-6, rtol=3e-6), variant)
             actual.square().mean().backward()
@@ -127,23 +126,23 @@ class ModelTests(unittest.TestCase):
     def test_sepc_only_skips_refinement_and_uses_uniform_aggregation(self):
         model = self.make_model('sepc_only')
         self.assertTrue(model.use_sepc)
-        model.get_fuse_factor = lambda *a: self.fail('SEPC-only must skip the QRR gate')
+        model.qrr_fusion_factor = lambda *a: self.fail('SEPC-only must skip the QRR gate')
         inputs = self.inputs()
-        actual = model.IFR_FD(*inputs)
+        actual = model.QRR_SWPA(*inputs)
         expected = self.dense_reference(model, *inputs)
         self.assertTrue(torch.allclose(actual, expected, atol=3e-6, rtol=3e-6))
         self.assertTrue(torch.allclose(actual[:, 4:8], actual[:, 4:8, :1, :1].expand(1, 4, 3, 2)))
 
     def test_no_qrr_never_calls_gate_and_handles_empty_support(self):
         model = self.make_model('wo_qrr')
-        model.get_fuse_factor = lambda *a: self.fail('QRR gate should not execute')
+        model.qrr_fusion_factor = lambda *a: self.fail('QRR gate should not execute')
         inputs = list(self.inputs())
         inputs[3].zero_()
-        self.assertTrue(torch.isfinite(model.IFR_FD(*inputs)).all())
+        self.assertTrue(torch.isfinite(model.QRR_SWPA(*inputs)).all())
 
     def test_no_swpa_features_are_spatially_uniform(self):
         model = self.make_model('wo_swpa')
-        actual = model.IFR_FD(*self.inputs())
+        actual = model.QRR_SWPA(*self.inputs())
         self.assertTrue(torch.allclose(actual[:, 4:8, :, :], actual[:, 4:8, :1, :1].expand(1, 4, 3, 2)))
 
     def test_no_sepc_support_context_uses_only_global_prototypes(self):
@@ -151,27 +150,28 @@ class ModelTests(unittest.TestCase):
         model.supp_decoder = nn.Identity()
         torch.manual_seed(3)
         feature, fg, bg = torch.randn(1, 4, 3, 2), torch.randn(5, 4), torch.randn(7, 4)
-        actual = model.getSelfPred(feature, fg, bg)
+        actual = model.sepc_self_prediction(feature, fg, bg)
         expected = torch.cat([feature, fg[-1].view(1, 4, 1, 1).expand_as(feature),
                               bg[-1].view(1, 4, 1, 1).expand_as(feature)], dim=1)
         self.assertTrue(torch.allclose(actual, expected))
 
     def test_no_sepc_samples_class_masks_and_preserves_counts(self):
         model = self.make_model('wo_sepc')
-        # Avoid allocating the large MLPs; execute production mask/selection methods.
-        model.get_fg_fts = lambda *args: torch.zeros(1).expand(1, 512, 256, 256)
+
+        model.fill_class_features = lambda *args: torch.zeros(1).expand(1, 512, 256, 256)
         model.mlp1 = lambda *args: torch.zeros(512, 100)
         model.mlp2 = lambda *args: torch.zeros(512, 600)
         sampled = []
+
         def sample(features, mask, count):
             sampled.append((mask.clone(), count))
             return torch.zeros(count, 512)
-        model.get_random_pts = sample
+        model.sample_prototype_features = sample
         features = torch.zeros(1, 512, 2, 2)
         mask = torch.zeros(1, 256, 256)
         mask[:, 64:192, 64:192] = 1
-        fg = model.get_fg_pts(features, mask, torch.ones_like(mask))
-        bg = model.get_bg_pts(features, mask, torch.zeros_like(mask))
+        fg = model.sepc_foreground_prototypes(features, mask, torch.ones_like(mask))
+        bg = model.sepc_background_prototypes(features, mask, torch.zeros_like(mask))
         self.assertEqual(tuple(fg.shape), (102, 512))
         self.assertEqual(tuple(bg.shape), (602, 512))
         self.assertTrue(torch.equal(sampled[0][0], mask))

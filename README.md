@@ -1,6 +1,7 @@
-# BSP 外部资源路径消融版
+# BSP规范版
 
-本版分支为 `ablation-external-paths`。项目只包含源码、脚本、说明和许可，
+本版分支为 `bsp-standard`，命名整理基于 `ablation-external-paths`。
+项目只包含源码、脚本、说明和许可，
 数据集、划分清单、预训练权重与实验输出均独立存放。
 训练命令用 `data_root=... pretrained_weights=...` 指定资源，无需修改源码。
 
@@ -10,8 +11,11 @@
 
 ## 开始实验
 
+模块名称与函数对应关系见 [规范版说明](BSP_STANDARD.md)。
+来源信息见 [NOTICE](NOTICE.md)，原许可文件保留。
+
 ```bash
-git clone --branch ablation-external-paths https://github.com/aihongjian777-crypto/BSP-cvpr.git BSP-ablation-external
+git clone --branch bsp-standard https://github.com/aihongjian777-crypto/BSP-cvpr.git BSP-ablation-external
 cd BSP-ablation-external
 python train.py with ablation_variant=sepc_only mode=train dataset=CHAOST2 eval_fold=2 n_steps=50000 max_iters_per_load=5000 lr_step_gamma=0.9 use_gt=False exclude_label=None n_way=1 n_shot=1 n_query=1 batch_size=1 num_workers=4 seed=1234 save_snapshot_every=5000 data_root=/datasets/CHAOST2 pretrained_weights=/pretrained/deeplabv3_resnet101_coco-586e9e4e.pth path.log_dir=/experiments/BSP
 ```

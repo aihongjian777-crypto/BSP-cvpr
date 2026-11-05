@@ -4,12 +4,7 @@ import torch.nn.functional as F
 
 
 def one_hot(label, n_classes, requires_grad=True):
-    """
-    Args:
-        label: (1, H, W)
-        n_classes: 2
-        requires_grad: True or False
-    """
+
     device = label.device
     one_hot_label = torch.eye(
         n_classes, device=device, requires_grad=requires_grad)[label]
@@ -27,15 +22,6 @@ class BoundaryLoss(nn.Module):
         self.theta = theta
 
     def forward(self, pred, gt):
-        """
-        Input:
-            pred: normalized two-class probabilities (after softmax), NOT logits
-                shape (1, 2, H, W)
-            gt: ground truth map
-                shape (1, H, W)
-        Return:
-            boundary loss, averaged over mini-batch
-        """
 
         n, c, _, _ = pred.shape
 

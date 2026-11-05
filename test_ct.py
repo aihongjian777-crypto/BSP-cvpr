@@ -1,19 +1,16 @@
 #!/usr/bin/env python
-"""
-For evaluation
-Extended from ADNet code by Hansen et al.
-"""
+
+
 import shutil
 import SimpleITK as sitk
 import torch.backends.cudnn as cudnn
 import torch.optim
 from torch.utils.data import DataLoader
-from models.cow_ct import FewShotSeg
+from models.bsp_ct import BSPModel
 from dataloaders.datasets import TestDataset
 from dataloaders.dataset_specifics import *
 from utils import *
 from config import ex
-# os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
 
 @ex.automain
@@ -47,7 +44,7 @@ def main(_run, _config, _log):
     torch.set_num_threads(1)
 
     _log.info(f'Create model...')
-    model = FewShotSeg(pretrained_weights=None)
+    model = BSPModel(pretrained_weights=None)
     model.cuda()
     if not _config['reload_model_path']:
         raise ValueError('Evaluation requires reload_model_path for the intended CT run')
@@ -98,28 +95,24 @@ def main(_run, _config, _log):
         with torch.no_grad():
             model.eval()
 
-            # Unpack support data.
             support_image = [support_sample['image'][[i]].float().cuda() for i in
                              range(support_sample['image'].shape[0])]
             support_fg_mask = [support_sample['label'][[i]].float().cuda() for i in
                                range(support_sample['image'].shape[0])]
 
-            # Loop through query volumes.
             scores = Scores()
             for i, sample in enumerate(test_loader):
 
-                # Unpack query data.
                 query_image = [sample['image'][i].float().cuda() for i in
                                range(sample['image'].shape[0])]
                 query_label = sample['label'].long()
                 query_id = sample['id'][0].split('image_')[1][:-len('.nii.gz')]
 
-                # Compute output.
                 query_pred = torch.zeros(query_label.shape[-3:])
                 C_q = sample['image'].shape[1]
 
                 idx_ = np.linspace(0, C_q, _config['n_part'] + 1).astype('int')
-                for sub_chunck in range(_config['n_part']):  # n_part = 3
+                for sub_chunck in range(_config['n_part']):
                     if idx_[sub_chunck] == idx_[sub_chunck + 1]:
                         continue
                     support_image_s = [support_image[sub_chunck]]
@@ -128,7 +121,7 @@ def main(_run, _config, _log):
                     query_pred_s = []
                     for slice_idx in range(query_image_s.shape[0]):
                         _pred_s, _, _, _, _ = model([support_image_s], [support_fg_mask_s], [query_image_s[[slice_idx]]],
-                                           train=False)
+                                                    train=False)
                         query_pred_s.append(_pred_s)
                     query_pred_s = torch.cat(query_pred_s, dim=0)
                     query_pred_s = query_pred_s.argmax(dim=1).cpu()
@@ -141,7 +134,6 @@ def main(_run, _config, _log):
                     f'Tested query volume: {sample["id"][0][len(_config["path"][_config["dataset"]]["data_dir"]):]}.')
                 _log.info(f'Dice score: {scores.patient_dice[-1].item()}')
 
-                # Save predictions.
                 file_name = os.path.join(f'{_run.observers[0].dir}/interm_preds',
                                          f'prediction_{query_id}_{label_name}.nii.gz')
                 itk_pred = sitk.GetImageFromArray(query_pred)
@@ -158,10 +150,10 @@ def main(_run, _config, _log):
     _log.info(f'Mean IoU: {class_iou}')
     _log.info(f'Mean Dice: {class_dice}')
 
-    def dict_Avg(Dict):
+    def mean_class_score(Dict):
         A = sum(Dict.values()) / len(Dict)
         return A
-    res = dict_Avg(class_dice)
+    res = mean_class_score(class_dice)
 
     _log.info(f'Total Mean Dice: {res}')
     _log.info(f'End of validation.')

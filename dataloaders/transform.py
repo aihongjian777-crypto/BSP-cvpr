@@ -1,7 +1,3 @@
-"""FoB_SAM paired transforms; only the affine API compatibility branch is added.
-
-Source: primebo1/FoB_SAM @ 40d0e23d75f81f07bb7f34cb641db51ef490d025.
-"""
 from __future__ import division
 import inspect
 import torch
@@ -57,9 +53,9 @@ class Compose(object):
 
 class ToTensor(object):
     def __call__(self, img, mask):
-        # return F.to_tensor(img), F.to_tensor(mask)
+
         img = np.array(img)
-        img = torch.from_numpy(img).permute(2, 0, 1).float() # TODO add division by 255 to match torch.ToTensor()?
+        img = torch.from_numpy(img).permute(2, 0, 1).float()
         mask = torch.from_numpy(np.array(mask)).float()
         return img, mask
 
@@ -122,7 +118,7 @@ class Pad(object):
 
     def __call__(self, img, mask):
         return F.pad(img, self.padding, self.fill, self.padding_mode), \
-               F.pad(mask, self.padding, self.fill, self.padding_mode)
+            F.pad(mask, self.padding, self.fill, self.padding_mode)
 
 
 class Lambda(object):
@@ -206,10 +202,9 @@ class RandomCrop(object):
         if self.padding is not None:
             img = F.pad(img, self.padding, self.fill, self.padding_mode)
 
-        # pad the width if needed
         if self.pad_if_needed and img.size[0] < self.size[1]:
             img = F.pad(img, (self.size[1] - img.size[0], 0), self.fill, self.padding_mode)
-        # pad the height if needed
+
         if self.pad_if_needed and img.size[1] < self.size[0]:
             img = F.pad(img, (0, self.size[0] - img.size[1]), self.fill, self.padding_mode)
 
@@ -252,7 +247,7 @@ class RandomPerspective(object):
             width, height = img.size
             startpoints, endpoints = self.get_params(width, height, self.distortion_scale)
             return F.perspective(img, startpoints, endpoints, self.interpolation), \
-                   F.perspective(mask, startpoints, endpoints, Image.NEAREST)
+                F.perspective(mask, startpoints, endpoints, Image.NEAREST)
         return img, mask
 
     @staticmethod
@@ -302,7 +297,6 @@ class RandomResizedCrop(object):
                 j = random.randint(0, img.size[0] - w)
                 return i, j, h, w
 
-        # Fallback to central crop
         in_ratio = img.size[0] / img.size[1]
         if (in_ratio < min(ratio)):
             w = img.size[0]
@@ -310,7 +304,7 @@ class RandomResizedCrop(object):
         elif (in_ratio > max(ratio)):
             h = img.size[1]
             w = h * max(ratio)
-        else:  # whole image
+        else:
             w = img.size[0]
             h = img.size[1]
         i = (img.size[1] - h) // 2
@@ -320,7 +314,7 @@ class RandomResizedCrop(object):
     def __call__(self, img, mask):
         i, j, h, w = self.get_params(img, self.scale, self.ratio)
         return F.resized_crop(img, i, j, h, w, self.size, self.interpolation), \
-               F.resized_crop(mask, i, j, h, w, self.size, Image.NEAREST)
+            F.resized_crop(mask, i, j, h, w, self.size, Image.NEAREST)
 
 
 class FiveCrop(object):
@@ -371,8 +365,6 @@ class ColorJitter(object):
         else:
             raise TypeError("{} should be a single number or a list/tuple with lenght 2.".format(name))
 
-        # if value is 0 or (1., 1.) for brightness/contrast/saturation
-        # or (0., 0.) for hue, do nothing
         if value[0] == value[1] == center:
             value = None
         return value
@@ -433,7 +425,7 @@ class RandomRotation(object):
         angle = self.get_params(self.degrees)
 
         return F.rotate(img, angle, Image.BILINEAR, self.expand, self.center), \
-               F.rotate(mask, angle, Image.NEAREST, self.expand, self.center)
+            F.rotate(mask, angle, Image.NEAREST, self.expand, self.center)
 
 
 class RandomAffine(object):
@@ -505,10 +497,9 @@ class RandomAffine(object):
         ret = self.get_params(self.degrees, self.translate, self.scale, self.shear, img.size)
         if 'interpolation' not in inspect.signature(F.affine).parameters:
             return F.affine(img, *ret, resample=Image.BILINEAR, fillcolor=self.fillcolor), \
-                   F.affine(mask, *ret, resample=Image.NEAREST, fillcolor=self.fillcolor)
+                F.affine(mask, *ret, resample=Image.NEAREST, fillcolor=self.fillcolor)
         return F.affine(img, *ret, interpolation=Image.BILINEAR, fill=self.fillcolor), \
-               F.affine(mask, *ret, interpolation=Image.NEAREST, fill=self.fillcolor)
-
+            F.affine(mask, *ret, interpolation=Image.NEAREST, fill=self.fillcolor)
 
 
 def get_cub_transform():
@@ -518,13 +509,13 @@ def get_cub_transform():
         RandomHorizontalFlip(),
         RandomAffine(22, scale=(0.75, 1.25)),
         ToTensor(),
-        Normalize(mean=[255*0.485, 255*0.456, 255*0.406], std=[255*0.229, 255*0.224, 255*0.225])
+        Normalize(mean=[255 * 0.485, 255 * 0.456, 255 * 0.406], std=[255 * 0.229, 255 * 0.224, 255 * 0.225])
     ])
     transform_test = Compose([
         ToPILImage(),
         Resize((256, 256)),
         ToTensor(),
-        Normalize(mean=[255*0.485, 255*0.456, 255*0.406], std=[255*0.229, 255*0.224, 255*0.225])
+        Normalize(mean=[255 * 0.485, 255 * 0.456, 255 * 0.406], std=[255 * 0.229, 255 * 0.224, 255 * 0.225])
     ])
     return transform_train, transform_test
 
@@ -532,90 +523,69 @@ def get_cub_transform():
 def get_glas_transform():
     transform_train = Compose([
         ToPILImage(),
-        # Resize((256, 256)),
+
         ColorJitter(brightness=0.2,
-                               contrast=0.2,
-                               saturation=0.2,
-                               hue=0.1),
+                    contrast=0.2,
+                    saturation=0.2,
+                    hue=0.1),
         RandomHorizontalFlip(),
         RandomAffine(5, scale=(0.75, 1.25)),
         ToTensor(),
-        # Normalize(mean=[255*0.485, 255*0.456, 255*0.406], std=[255*0.229, 255*0.224, 255*0.225])
+
     ])
     transform_test = Compose([
         ToPILImage(),
-        # Resize((256, 256)),
+
         ToTensor(),
-        # Normalize(mean=[255*0.485, 255*0.456, 255*0.406], std=[255*0.229, 255*0.224, 255*0.225])
+
     ])
     return transform_train, transform_test
-
-# def get_glas_transform():
-#     transform_train = Compose([
-#         ToPILImage(),
-#         Resize((256, 256)),
-#         ColorJitter(brightness=0.2,
-#                                contrast=0.2,
-#                                saturation=0.2,
-#                                hue=0.1),
-#         RandomHorizontalFlip(),
-#         RandomAffine(5, scale=(0.75, 1.25)),
-#         ToTensor(),
-#         Normalize(mean=[255*0.485, 255*0.456, 255*0.406], std=[255*0.229, 255*0.224, 255*0.225])
-#     ])
-#     transform_test = Compose([
-#         ToPILImage(),
-#         Resize((256, 256)),
-#         ToTensor(),
-#         Normalize(mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375])
-#     ])
-#     return transform_train, transform_test
 
 
 def get_monu_transform(args):
     Idim = int(args['Idim'])
     transform_train = Compose([
         ToPILImage(),
-        # Resize((Idim, Idim)),
+
         ColorJitter(brightness=0.4,
-                               contrast=0.4,
-                               saturation=0.4,
-                               hue=0.1),
+                    contrast=0.4,
+                    saturation=0.4,
+                    hue=0.1),
         RandomHorizontalFlip(),
         RandomAffine(int(args['rotate']), scale=(float(args['scale1']), float(args['scale2']))),
         ToTensor(),
-        # Normalize(mean=[142.07, 98.48, 132.96], std=[65.78, 57.05, 57.78])
+
     ])
     transform_test = Compose([
         ToPILImage(),
-        # Resize((Idim, Idim)),
+
         ToTensor(),
-        # Normalize(mean=[142.07, 98.48, 132.96], std=[65.78, 57.05, 57.78])
+
     ])
     return transform_train, transform_test
 
 
 def get_polyp_transform():
     transform_train = Compose([
-        # Resize((352, 352)),
+
         ToPILImage(),
         ColorJitter(brightness=0.4,
-                               contrast=0.4,
-                               saturation=0.4,
-                               hue=0.1),
+                    contrast=0.4,
+                    saturation=0.4,
+                    hue=0.1),
         RandomVerticalFlip(),
         RandomHorizontalFlip(),
         RandomAffine(90, scale=(0.75, 1.25)),
         ToTensor(),
-        # Normalize([105.61, 63.69, 45.67],
-        #                      [83.08, 55.86, 42.59])
+
+
     ])
     transform_test = Compose([
-        # Resize((352, 352)),
+
         ToPILImage(),
         ToTensor(),
-        # Normalize([105.61, 63.69, 45.67],
-        #                      [83.08, 55.86, 42.59])
+
+
     ])
     return transform_train, transform_test
 
@@ -623,9 +593,9 @@ def get_polyp_transform():
 def get_polyp_support_train_transform():
     transform_train = Compose([
         ColorJitter(brightness=0.4,
-                               contrast=0.4,
-                               saturation=0.4,
-                               hue=0.1),
+                    contrast=0.4,
+                    saturation=0.4,
+                    hue=0.1),
         RandomVerticalFlip(),
         RandomHorizontalFlip(),
         RandomAffine(90, scale=(0.75, 1.25)),

@@ -1,8 +1,3 @@
-"""Optional FoB_SAM class_id.csv categorization with portable source paths.
-
-The active Setting I loader reads categories from JSON, so this copy is optional.
-Source: primebo1/FoB_SAM @ 40d0e23d75f81f07bb7f34cb641db51ef490d025.
-"""
 import argparse
 import csv
 from pathlib import Path

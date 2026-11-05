@@ -1,8 +1,3 @@
-"""FoB_SAM SLIC generation with portable paths and a server preflight CLI.
-
-Upstream: primebo1/FoB_SAM @ 40d0e23d75f81f07bb7f34cb641db51ef490d025.
-The SLIC algorithm and its parameters are unchanged.
-"""
 import argparse
 import hashlib
 import json

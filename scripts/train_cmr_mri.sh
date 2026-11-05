@@ -1,23 +1,20 @@
 #!/bin/bash
-# train a model to segment cardiac MRI
 GPUID1=1
 export CUDA_VISIBLE_DEVICES=$GPUID1
 
-###### Shared configs ######
 DATASET='CMR'
 NWORKER=8
 RUNS=1
-ALL_EV=(0 1 2 3 4) # 5-fold cross validation (0, 1, 2, 3, 4)
+ALL_EV=(0 1 2 3 4)
 TEST_LABEL=[1,2,3]
 EXCLUDE_LABEL=None
 USE_GT=False
-###### Training configs ######
 
 NSTEP=50000
 DECAY=0.98
 
-MAX_ITER=5000 # defines the size of an epoch
-SNAPSHOT_INTERVAL=50000 # interval for saving snapshot
+MAX_ITER=5000
+SNAPSHOT_INTERVAL=50000
 SEED=2025
 
 echo ========================================================================

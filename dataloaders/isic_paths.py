@@ -1,4 +1,3 @@
-"""Portable paths for the FoB_SAM Setting I protocol; no tensor dependencies."""
 import json
 from pathlib import Path
 
@@ -47,7 +46,7 @@ def resolve_fold(folds, fold):
 
 def image_and_mask_roots(data_root=None):
     root = project_path(data_root, DEFAULT_DATA_ROOT)
-    # The first layout is the user's existing dataset; the others are upstream layouts.
+
     candidates = [(root / 'train' / 'images', root / 'train' / 'masks'),
                   (root / 'ISIC2018_Task1-2_Training_Input',
                    root / 'ISIC2018_Task1_Training_GroundTruth'),
@@ -62,7 +61,7 @@ def image_and_mask_roots(data_root=None):
 
 
 def find_data_file(folder, image_id, suffix):
-    """Allow the flat user layout and upstream category subdirectories, never val/test."""
+
     folder = Path(folder)
     direct = folder / (image_id + suffix)
     if direct.is_file():

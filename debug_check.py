@@ -2,10 +2,9 @@ import nibabel as nib
 import numpy as np
 import os
 
-# ==========================================
-# 👇 这里我已经填好了你刚才给的准确路径
+
 path_pred = '/mnt/e/CoW-Linest/CoW-main/runs/CoW_train_CHAOST2_cv0/26/interm_preds/prediction_8_LK.nii.gz'
-# ==========================================
+
 
 print(f"🔍 正在检查文件: {path_pred}")
 
@@ -13,12 +12,10 @@ if not os.path.exists(path_pred):
     print("❌ 错误：找不到文件！请确认文件夹里是否有 prediction_8_LK.nii.gz")
 else:
     try:
-        # 1. 读取
+
         nii = nib.load(path_pred)
         data = nii.get_fdata()
 
-        # 2. 统计
-        # 只要像素值 > 0.1 就代表模型画了东西
         pixel_count = np.sum(data > 0.1)
 
         print("-" * 40)
@@ -26,7 +23,6 @@ else:
         print(f"🟥 红色像素数量 (Count): {pixel_count}")
         print("-" * 40)
 
-        # 3. 判决
         if pixel_count == 0:
             print("💀 【诊断结果】：空文件 (全黑)！")
             print("   原因：之前的参数 (bg_factor=0.6) 太狠了，把左肾彻底抑制没了。")
@@ -36,7 +32,6 @@ else:
             print("   原因：模型预测成功了，只是 Slicer 显示位置没对上。")
             print("   👉 对策：可以直接进行下一步的可视化分析。")
 
-            # 帮你找它在哪几层
             z_sum = np.sum(data, axis=(0, 1))
             slices = np.where(z_sum > 0)[0]
             if len(slices) > 0:

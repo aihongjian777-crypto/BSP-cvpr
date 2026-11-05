@@ -1,8 +1,6 @@
 #!/usr/bin/env python
-"""
-For Evaluation
-Extended from ADNet code by Hansen et al.
-"""
+
+
 import os
 import random
 import logging
@@ -13,7 +11,7 @@ import torch.backends.cudnn as cudnn
 import torch.optim
 from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import MultiStepLR
-from models.cow_ct import FewShotSeg
+from models.bsp_ct import BSPModel
 from dataloaders.datasets import TrainDataset as TrainDataset
 from utils import *
 from config import ex
@@ -51,7 +49,7 @@ def main(_run, _config, _log):
     torch.set_num_threads(1)
 
     _log.info(f'Create model...')
-    model = FewShotSeg(pretrained_weights=_config['pretrained_weights'])
+    model = BSPModel(pretrained_weights=_config['pretrained_weights'])
     model = model.cuda()
     model.train()
 

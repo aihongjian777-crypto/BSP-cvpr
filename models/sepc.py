@@ -3,16 +3,16 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
-class MLP(nn.Module):
-    def __init__(self, in_dim=257, out_dim=100):
-        super(MLP, self).__init__()
+class SEPCPrototypeMLP(nn.Module):
+    def __init__(self, in_dim=256, out_dim=100):
+        super(SEPCPrototypeMLP, self).__init__()
         self.in_dim = in_dim
         self.out_dim = out_dim
         self.reduce = nn.Sequential(
-            nn.Linear(in_features=self.in_dim*self.in_dim, out_features=self.out_dim, bias=True),
+            nn.Linear(in_features=self.in_dim * self.in_dim, out_features=self.out_dim, bias=True),
             nn.Dropout(p=0.2),
             nn.Linear(in_features=self.out_dim, out_features=self.out_dim, bias=True)
-            )
+        )
 
     def forward(self, x):
 
@@ -20,13 +20,13 @@ class MLP(nn.Module):
         return out
 
 
-class Decoder(nn.Module):
+class PrototypeDecoder(nn.Module):
     def __init__(self, in_dim=100):
-        super(Decoder, self).__init__()
+        super(PrototypeDecoder, self).__init__()
         self.in_dim = in_dim
         self.res1 = nn.Sequential(
             nn.Conv2d(self.in_dim + 2, self.in_dim, kernel_size=1, padding=0, bias=False),
-            # nn.BatchNorm2d(100),
+
             nn.ReLU(inplace=True))
         self.res2 = nn.Sequential(
             nn.Conv2d(self.in_dim, self.in_dim, kernel_size=3, padding=1, bias=False),
@@ -48,9 +48,9 @@ class Decoder(nn.Module):
         return out
 
 
-class Supp_Decoder(nn.Module):
+class SEPCDecoder(nn.Module):
     def __init__(self, num_classes=1):
-        super(Supp_Decoder, self).__init__()
+        super(SEPCDecoder, self).__init__()
         self.num_classes = num_classes
         self.layer5 = nn.Sequential(
             nn.Conv2d(in_channels=512 * 3, out_channels=512, kernel_size=3, stride=1, padding=2, dilation=2,
@@ -127,7 +127,7 @@ class Supp_Decoder(nn.Module):
         global_feature = self.layer6_0(global_feature)
         global_feature = global_feature.expand(-1, -1, new_feature.shape[-2], new_feature.shape[-1])
         out = torch.cat([global_feature, self.layer6_1(out), self.layer6_2(out),
-                        self.layer6_3(out), self.layer6_4(out)], dim=1)
+                         self.layer6_3(out), self.layer6_4(out)], dim=1)
         out = self.layer7(out)
         out = self.layer9(out)
 

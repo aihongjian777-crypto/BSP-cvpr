@@ -1,7 +1,3 @@
-"""
-Utils for Dataset
-Extended from ADNet code by Hansen et al.
-"""
 import random
 import torch
 import numpy as np
@@ -11,9 +7,7 @@ import logging
 
 
 def set_seed(seed):
-    """
-    Set the random seed
-    """
+
     random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed_all(seed)
@@ -22,16 +16,13 @@ def set_seed(seed):
 CLASS_LABELS = {
     'CHAOST2': {
         'pa_all': set(range(1, 5)),
-        0: set([1, 4]),  # upper_abdomen, leaving kidneies as testing classes
-        1: set([2, 3]),  # lower_abdomen
+        0: set([1, 4]),
+        1: set([2, 3]),
     },
 }
 
 
 def get_bbox(fg_mask, inst_mask):
-    """
-    Get the ground truth bounding boxes
-    """
 
     fg_bbox = torch.zeros_like(fg_mask, device=fg_mask.device)
     bg_bbox = torch.ones_like(fg_mask, device=fg_mask.device)
@@ -59,9 +50,7 @@ def get_bbox(fg_mask, inst_mask):
 
 
 def t2n(img_t):
-    """
-    torch to numpy regardless of whether tensor is on gpu or memory
-    """
+
     if img_t.is_cuda:
         return img_t.data.cpu().numpy()
     else:
@@ -69,9 +58,7 @@ def t2n(img_t):
 
 
 def to01(x_np):
-    """
-    normalize a numpy to 0-1 for visualize
-    """
+
     return (x_np - x_np.min()) / (x_np.max() - x_np.min() + 1e-5)
 
 
@@ -118,12 +105,10 @@ def set_logger(path):
     formatter = logging.Formatter('[%(levelname)] - %(name)s - %(message)s')
     logger.setLevel("INFO")
 
-    # log to .txt
     file_handler = logging.FileHandler(path)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 
-    # log to console
     stream_handler = logging.StreamHandler()
     stream_handler.setFormatter(formatter)
     logger.addHandler(stream_handler)
