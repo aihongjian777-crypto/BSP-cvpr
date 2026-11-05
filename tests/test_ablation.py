@@ -9,7 +9,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from models.ablation import module_flags, save_metadata, validate_checkpoint
+from models.ablation import VARIANTS, module_flags, save_metadata, validate_checkpoint
 from scripts.summarize_ablation import summarize
 
 try:
@@ -43,12 +43,13 @@ class ProvenanceTests(unittest.TestCase):
     def test_summary_requires_matched_evaluations(self):
         with tempfile.TemporaryDirectory() as folder:
             paths = []
-            for variant in ('full', 'wo_sepc', 'wo_qrr', 'wo_swpa'):
+            for variant in VARIANTS:
                 path = Path(folder) / (variant + '.json')
                 path.write_text(json.dumps(dict(ablation_variant=variant, dataset='CHAOST2',
                     fold=0, seed=2025, support_index=1, class_dice={'LIVER': 0.8, 'RK': 0.6})))
                 paths.append(path)
             rows = summarize(paths)
+            self.assertEqual(len(rows), 5)
             self.assertAlmostEqual(rows[0]['Avg'], 70.0)
             with self.assertRaises(ValueError):
                 summarize(paths[:-1])
@@ -110,7 +111,7 @@ class ModelTests(unittest.TestCase):
         return torch.cat([query, matched, response], dim=1)
 
     def test_all_query_paths_match_dense_definition_and_backpropagate(self):
-        for variant in ('full', 'wo_sepc', 'wo_qrr', 'wo_swpa'):
+        for variant in VARIANTS:
             model = self.make_model(variant)
             inputs = list(self.inputs())
             inputs[0].requires_grad_()
@@ -121,7 +122,17 @@ class ModelTests(unittest.TestCase):
             actual.square().mean().backward()
             self.assertTrue(torch.isfinite(inputs[0].grad).all(), variant)
             self.assertTrue(torch.isfinite(inputs[1].grad).all(), variant)
-            self.assertEqual(model.fuse.weight.grad is None, variant == 'wo_qrr')
+            self.assertEqual(model.fuse.weight.grad is None, not model.use_qrr)
+
+    def test_sepc_only_skips_refinement_and_uses_uniform_aggregation(self):
+        model = self.make_model('sepc_only')
+        self.assertTrue(model.use_sepc)
+        model.get_fuse_factor = lambda *a: self.fail('SEPC-only must skip the QRR gate')
+        inputs = self.inputs()
+        actual = model.IFR_FD(*inputs)
+        expected = self.dense_reference(model, *inputs)
+        self.assertTrue(torch.allclose(actual, expected, atol=3e-6, rtol=3e-6))
+        self.assertTrue(torch.allclose(actual[:, 4:8], actual[:, 4:8, :1, :1].expand(1, 4, 3, 2)))
 
     def test_no_qrr_never_calls_gate_and_handles_empty_support(self):
         model = self.make_model('wo_qrr')

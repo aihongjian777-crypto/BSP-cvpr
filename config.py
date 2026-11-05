@@ -140,6 +140,11 @@ def ablation_wo_swpa():
     ablation_variant = 'wo_swpa'
 
 
+@ex.named_config
+def ablation_sepc_only():
+    ablation_variant = 'sepc_only'
+
+
 @ex.config_hook
 def add_observer(config, command_name, logger):
     """A hook fucntion to add observer"""

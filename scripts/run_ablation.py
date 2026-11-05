@@ -1,4 +1,4 @@
-"""Launch the four ablations through the existing Sacred train/test entry points."""
+"""Launch named ablations through the existing Sacred train/test entry points."""
 import argparse
 import json
 from pathlib import Path

@@ -1,7 +1,7 @@
 # BSP module ablations
 
 This is the `ablation` branch. The original complete-model snapshot remains on `main`.
-Four configurations are available: `full`, `wo_sepc`, `wo_qrr`, and `wo_swpa`.
+Five configurations are available: `full`, `wo_sepc`, `wo_qrr`, `wo_swpa`, and `sepc_only`.
 See [the ablation guide](ABLATION.md) for exact replacement definitions, training,
 evaluation, and the module-checkmark results table. Each variant must be trained separately.
 

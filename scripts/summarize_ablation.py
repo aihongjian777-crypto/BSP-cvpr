@@ -34,7 +34,7 @@ def summarize(result_paths):
         raise ValueError('Summarize exactly one dataset at a time')
     expected = set(grouped['full'])
     if not expected or any(set(runs) != expected for runs in grouped.values()):
-        raise ValueError('All four variants must contain the same fold/seed/support-index evaluations')
+        raise ValueError('All configured variants must contain the same fold/seed/support-index evaluations')
     rows = []
     for variant, runs in grouped.items():
         row = {'variant': variant, **{name.upper(): int(flag) for name, flag in VARIANTS[variant].items()}}

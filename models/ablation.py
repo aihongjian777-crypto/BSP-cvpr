@@ -8,6 +8,7 @@ VARIANTS = {
     'wo_sepc': {'sepc': False, 'qrr': True, 'swpa': True},
     'wo_qrr': {'sepc': True, 'qrr': False, 'swpa': True},
     'wo_swpa': {'sepc': True, 'qrr': True, 'swpa': False},
+    'sepc_only': {'sepc': True, 'qrr': False, 'swpa': False},
 }
 
 
@@ -32,7 +33,7 @@ def save_metadata(snapshot_dir, config):
 
 
 def validate_checkpoint(checkpoint, config):
-    """State shapes alone cannot distinguish these four architectures."""
+    """State shapes alone cannot distinguish the ablation configurations."""
     sidecar = Path(checkpoint).parent / 'ablation.json'
     if not sidecar.is_file():
         if config['ablation_variant'] != 'full':
